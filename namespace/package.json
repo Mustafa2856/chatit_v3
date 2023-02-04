@@ -1,10 +1,13 @@
 {
   "dependencies": {
+    "ethers": "^5.7.2",
+    "express": "^4.18.2",
     "ganache": "^7.7.3",
     "truffle": "^5.7.4"
   },
   "scripts": {
     "ganache": "ganache --wallet.seed myCustomSeed --db chainData",
     "truffle": "truffle"
-  }
+  },
+  "type": "module"
 }
