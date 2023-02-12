@@ -16,4 +16,7 @@ contract Database {
         userinfo[_username] = UserInfo(_username, _private_key, _public_key);
     }
 
+    function getUserInfo(string memory _username) view public returns (UserInfo memory){
+        return userinfo[_username];
+    }
 }
