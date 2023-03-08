@@ -8,7 +8,8 @@
   },
   "scripts": {
     "ganache": "ganache --wallet.seed myCustomSeed --db chainData",
-    "truffle": "truffle"
+    "truffle": "truffle",
+    "start": "node index.mjs"
   },
   "type": "commonjs"
 }

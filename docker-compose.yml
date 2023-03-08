@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  namespace:
+    build: ./namespace
+    ports:
+      - "3000:3000"
+
+  hosts:
+    build: ./hosts
+    ports:
+      - "5000:5000"
+    links:
+      - psql
+    depends_on:
+      - namespace
+      - ipfs
+
+  ipfs:
+    image: ipfs/go-ipfs
+    ports:
+      - "4001:4001"
+      - "5001:5001"
+      - "8080:8080"
+
+  psql:
+    image: postgres
+    environment:
+      POSTGRES_USER: locallookup
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: chatit
+    volumes:
+      - data:/var/lib/postgresql/data
+      - ./hosts/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  data:
