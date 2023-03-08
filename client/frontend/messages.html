@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <script src="ui-manager.js"></script>
+    <script src="bundle.js"></script>
+    <script>window.onload = () => {getMessages().then(getMessagesLoop());}</script>
+    <!-- CSS only -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi" crossorigin="anonymous">
+    <!-- JavaScript Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"
+        crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="style.css" />
+    <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-light">
+        <!-- <a class="navbar-brand disabled" href="index.html">Project name</a> -->
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="login.html">Login</a>
+                </li>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link disabled" href="messages.html">Chat</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <!--------------------------------------------------------------------------------------------------------->
+    <section style="background-color: #eee;">
+        <div class="container py-5">
+      
+          <div class="row">
+      
+            <div class="col-md-6 col-lg-5 col-xl-4 mb-4 mb-md-0">
+      
+              <div class="card">
+                <div class="card-body">
+                  <input type="text" id="newUser"/>
+                  <button onclick="addUserToChat(document.getElementById('newUser').value)">+</button>
+                  <ul class="list-unstyled mb-0" id="userList" style="overflow-y: scroll;overflow-x: hidden;height: 60vh;">
+                    <!-- added by getMessages -->
+                  </ul>
+
+                </div>
+              </div>
+              <div class="card">
+                Groupname: <input type="text" id="groupname"/>
+                Groupusers: <input type="text" id="groupuserlist"/>
+                <button onclick="createGroup(document.getElementById('groupname').value,document.getElementById('groupuserlist').value)">Create group</button>
+              </div>
+            </div>
+      
+            <div class="col-md-6 col-lg-7 col-xl-8">
+      
+              <ul class="list-unstyled" id="messageWindow" style="overflow-y: scroll;overflow-x: hidden;height: 60vh;display:flex;flex-direction: column-reverse;">
+                <!-- added by getMessageOfUser -->
+              </ul>
+              <div id="messageInputWindow" style="height: 30vh;"></div>
+            </div>
+      
+          </div>
+      
+        </div>
+      </section>
+</body>
