@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -18,10 +19,14 @@ type Message struct {
 	Signature      []byte `json:"signature" binding:"required"`
 }
 
-var db *sql.DB
+type MessageChannel chan Message
 
-func api_setup(db_ *sql.DB) {
+var db *sql.DB
+var msgChannel chan Message
+
+func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	db = db_
+	msgChannel = _msgChannel
 
 	service := gin.Default()
 	service.SetTrustedProxies(nil)
@@ -29,6 +34,8 @@ func api_setup(db_ *sql.DB) {
 
 	service.POST("/send-message", sendMessage)
 	service.GET("/get-messages/:username", getMessages)
+	service.GET("/get-messages-stream/:username", getMessagesSSE)
+
 	ip := "0.0.0.0"
 	port := "5000"
 	address := ip + ":" + port
@@ -139,6 +146,92 @@ func getMessages(c *gin.Context) {
 	} else {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
+}
+
+func getMessagesSSE(c *gin.Context) {
+	username := c.Param("username")
+	timestamp := c.Query("timestamp")
+
+        if timestamp != "" {
+		timestamp, err := strconv.ParseUint(timestamp, 10, 64)
+		if err != nil {
+			println(err.Error())
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		response := map[string][]Message{}
+		var message Message
+		sentMessageRows, err := db.Query("SELECT content_address, sender, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature FROM messages WHERE sender = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		for sentMessageRows.Next() {
+			sentMessageRows.Scan(
+				&message.ContentAddress,
+				&message.Sender,
+				&message.Receiver,
+				&message.Timestamp,
+				&message.Signature)
+			if messageList, ok := response[message.Receiver]; ok {
+				messageList = append(messageList, message)
+				response[message.Receiver] = messageList
+			} else {
+				messageList = []Message{message}
+				response[message.Receiver] = messageList
+			}
+		}
+		receivedMessageRows, err := db.Query("SELECT content_address, sender, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature FROM messages WHERE receiver = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		for receivedMessageRows.Next() {
+			receivedMessageRows.Scan(
+				&message.ContentAddress,
+				&message.Sender,
+				&message.Receiver,
+				&message.Timestamp,
+				&message.Signature)
+			if messageList, ok := response[message.Sender]; ok {
+				messageList = append(messageList, message)
+				response[message.Sender] = messageList
+			} else {
+				messageList = []Message{message}
+				response[message.Sender] = messageList
+			}
+		}
+
+		// groupMessages := getGroupMessages(username, timestamp)
+		// for groupName, messages := range groupMessages {
+		// 	response[groupName] = messages
+		// }
+
+		for _, messages := range response {
+			sort.Slice(messages, func(i, j int) bool {
+				return messages[i].Timestamp < messages[j].Timestamp
+			})
+		}
+
+		go func(){
+			for _, msgs := range response {
+				for _, msg:= range msgs {
+					msgChannel <- msg
+				}
+			}
+		}()
+	}
+
+	c.Stream(func(w io.Writer) bool {
+		if msg, ok := <-msgChannel; ok {
+			//log.Println("Message", msg)
+			if msg.Receiver == username || msg.Sender == username {	
+				c.SSEvent("message", msg)
+				return true
+			}
+		}
+		return false
+	})
 }
 
 func verifySignature(sender string, hash []byte, signature []byte) (bool, error) {

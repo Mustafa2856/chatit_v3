@@ -1,6 +1,6 @@
 package main
 
 func main() {
-	db := db_setup()
-	api_setup(db)
+	db, newMessageChannel := db_setup()
+	api_setup(db, newMessageChannel)
 }
