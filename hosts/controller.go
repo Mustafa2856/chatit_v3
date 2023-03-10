@@ -19,14 +19,21 @@ type Message struct {
 	Signature      []byte `json:"signature" binding:"required"`
 }
 
-type MessageChannel chan Message
+type Listener struct {
+	Username string
+	Channel  chan Message
+}
 
 var db *sql.DB
 var msgChannel chan Message
+var activeListeners chan Listener
+var closeListener chan Listener
+var listeners map[string]chan Message
 
 func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	db = db_
 	msgChannel = _msgChannel
+	activeListeners = make(chan Listener)
 
 	service := gin.Default()
 	service.SetTrustedProxies(nil)
@@ -40,6 +47,25 @@ func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	port := "5000"
 	address := ip + ":" + port
 	service.Run(address)
+
+	go messageRelay()
+}
+
+func messageRelay() {
+	for {
+		select {
+		case listener := <-activeListeners:
+			listeners[listener.Username] = listener.Channel
+		case message := <-msgChannel:
+			if listeners[message.Receiver] != nil {
+				listeners[message.Receiver] <- message
+			}
+		case listener := <-closeListener:
+			if listeners[listener.Username] != nil {
+				listeners[listener.Username] = nil
+			}
+		}
+	}
 }
 
 // send msg to other user
@@ -152,7 +178,7 @@ func getMessagesSSE(c *gin.Context) {
 	username := c.Param("username")
 	timestamp := c.Query("timestamp")
 
-        if timestamp != "" {
+	if timestamp != "" {
 		timestamp, err := strconv.ParseUint(timestamp, 10, 64)
 		if err != nil {
 			println(err.Error())
@@ -213,23 +239,23 @@ func getMessagesSSE(c *gin.Context) {
 			})
 		}
 
-		go func(){
+		go func() {
 			for _, msgs := range response {
-				for _, msg:= range msgs {
+				for _, msg := range msgs {
 					msgChannel <- msg
 				}
 			}
 		}()
 	}
 
+	newMessageChannel := make(chan Message)
+	activeListeners <- Listener{username, newMessageChannel}
 	c.Stream(func(w io.Writer) bool {
-		if msg, ok := <-msgChannel; ok {
-			//log.Println("Message", msg)
-			if msg.Receiver == username || msg.Sender == username {	
-				c.SSEvent("message", msg)
-				return true
-			}
+		if msg, ok := <-newMessageChannel; ok {
+			c.SSEvent("message", msg)
+			return true
 		}
+		closeListener <- Listener{username, newMessageChannel}
 		return false
 	})
 }
