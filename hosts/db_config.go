@@ -9,7 +9,7 @@ import (
 )
 
 func db_setup() (*sql.DB, chan Message) {
-	connString := "postgres://locallookup:1234@localhost:5432/chatit"
+	connString := "postgres://locallookup:1234@host.docker.internal:5432/chatit"
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		panic(err)
@@ -45,9 +45,9 @@ func listenDB(db *sql.DB, listener *pq.Listener, channel string, newMessageChann
 			continue
 		}
 		content_address := e.Extra
-		row:= db.QueryRow("SELECT content_address, sender, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature FROM messages WHERE content_address = $1", content_address);
+		row := db.QueryRow("SELECT content_address, sender, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature FROM messages WHERE content_address = $1", content_address)
 		var newMessage Message
-		if err:= row.Scan(
+		if err := row.Scan(
 			&newMessage.ContentAddress,
 			&newMessage.Sender,
 			&newMessage.Receiver,

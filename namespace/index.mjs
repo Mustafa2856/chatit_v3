@@ -2,27 +2,34 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import { databaseContract } from './chain.mjs';
 import { verify } from 'eccrypto';
+import cors from 'cors';
 
 const app = express();
 app.use(bodyParser.json());
+app.use(cors());
 const port = 3000;
 
 app.get('/:userId', async (req, res) => {
     const userDetails = await databaseContract.getUserInfo(req.params.userId);
     // user does not exist
     if (userDetails[0] == "") {
-        res.json({});
+        res.sendStatus(404);
     }
     else {
-        res.json(userDetails);
+        let response = {
+            username: userDetails[0],
+            private_key: Buffer.from(userDetails[1].substring(2), 'hex').toString('base64'),
+            public_key: Buffer.from(userDetails[2].substring(2), 'hex').toString('base64'),
+        }
+        res.json(response);
     }
 });
 
 app.post('/:userId', async (req, res) => {
 
     const userId = req.params.userId;
-    const privateKey = req.body.private_key;
-    const publicKey = req.body.public_key;
+    const privateKey = Buffer.from(req.body.private_key,'base64');
+    const publicKey = Buffer.from(req.body.public_key,'base64');
 
     const userDetails = await databaseContract.getUserInfo(userId);
 

@@ -3,7 +3,9 @@ import ipfsClient from 'ipfs-http-client';
 
 const ipfs = ipfsClient('http://localhost:5001/api/v0');
 
-const serverURL = 'http://localhost:5000'
+var serverURL = 'http://localhost:5000'
+var namespaceURL = 'http://localhost:3000' 
+let msgStream;
 
 const getAESKey = async (username, password) => {
     let encoder = new TextEncoder();
@@ -28,7 +30,7 @@ const getAESKey = async (username, password) => {
     return AESKey;
 }
 
-const saveUserKeys = async (username, publicKey, privateKey) => {
+const saveUserKeys = (username, publicKey, privateKey) => {
     sessionStorage.setItem('username', username);
     sessionStorage.setItem('publicKey', publicKey);
     sessionStorage.setItem('privateKey', privateKey);
@@ -178,7 +180,7 @@ const registerUser = async (username, email, password) => {
     let publicKeyString = publicKey.toString('base64');
     let encryptedPrivateKeyString = Buffer.from(encryptedPrivateKey).toString('base64');
 
-    let response = await fetch(serverURL + "/register", {
+    let response = await fetch(namespaceURL + "/" + username, {
         method: 'POST',
         cache: 'no-cache',
         headers: {
@@ -187,8 +189,6 @@ const registerUser = async (username, email, password) => {
         redirect: 'follow',
         referrerPolicy: 'no-referrer',
         body: JSON.stringify({
-            'username': username,
-            'email': email,
             'public_key': publicKeyString,
             'private_key': encryptedPrivateKeyString
         })
@@ -201,15 +201,16 @@ const registerUser = async (username, email, password) => {
 }
 
 const loginUser = async (username, password) => {
-    let AESKey = await getAESKey(username, password);
+    let AESKey = await getAESKey(username, password)
     let iv = Buffer.from((username + 'username12345678901234567890').slice(0, 16));
-    let response = await fetch(serverURL + "/login/" + username, {
+    let response = await fetch(namespaceURL + "/" + username, {
         method: "GET",
         cache: "no-cache"
-    });
+    })
 
     if (response.ok) {
-        let keyPair = await response.json();
+        let keyPair = await response.json()
+        console.log(Buffer.from(keyPair['private_key'], 'base64'),AESKey)
         let decryptedPrivateKey = await crypto.subtle.decrypt(
             {
                 name: "AES-CBC",
@@ -217,10 +218,12 @@ const loginUser = async (username, password) => {
             },
             AESKey,
             Buffer.from(keyPair['private_key'], 'base64')
-        );
-        saveUserKeys(username, keyPair['public_key'], Buffer.from(decryptedPrivateKey).toString('base64'))
+        ).catch((err)=>console.log("decrypt:",err) );
+        saveUserKeys(username, keyPair['public_key'], Buffer.from(decryptedPrivateKey).toString('base64'));
+        return true;
     } else {
         console.log('Login error');
+        return false;
     }
 }
 
@@ -317,6 +320,22 @@ const getMessages = async (timestamp) => {
 
         return allMessages
     }
+}
+
+const getMessagesStream = () => {
+    try {
+        // close msg stream if exists
+        msgStream.close()
+    } catch(exception){
+        // msgStream not already present
+    }
+    if (sessionStorage.getItem("username") != null) {
+        let username = sessionStorage.getItem("username")
+        msgStream = new EventSource(serverURL + "/get-messages-stream/" + username)
+        return msgStream
+    }
+    throw new Error("user not logged in!")
+    return null
 }
 
 const createGroup = async (groupName, userList) => {
@@ -602,6 +621,7 @@ window.serverconnect = {
     'loginUser': loginUser,
     'sendMessage': sendMessage,
     'getMessages': getMessages,
+    'getMessagesStream':getMessagesStream,
     'createGroup': createGroup,
     'updateGroupUserList' : updateGroupUserList
 }

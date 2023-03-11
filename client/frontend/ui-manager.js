@@ -2,15 +2,15 @@ let lastMessageTimestamp = 1;
 let messagesBuffer = {};
 let userList = [];
 let groupList = {};
+var msgStream;
 
 const login = async (username, password) => {
-  await serverconnect.loginUser(username, password);
-  window.location.replace("messages.html");
+  let successful = await serverconnect.loginUser(username, password).catch((err)=>{console.log(err)});
+  if(successful) window.location.replace("messages.html");
 }
 
 const register = async (username, email, password) => {
   let successful = await serverconnect.registerUser(username, email, password);
-  console.log(successful)
   if (successful) window.location.replace("messages.html");
 }
 
@@ -36,6 +36,7 @@ const getMessages = async () => {
 }
 
 const getMessagesOfUser = async () => {
+  // TODO separate out and use msgStream
   let username = sessionStorage.getItem("userMessageWindow");
   let receiver = sessionStorage.getItem("username")
   let response = await serverconnect.getMessages(lastMessageTimestamp);
