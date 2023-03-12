@@ -20,13 +20,16 @@ services:
       - ipfs
 
   ipfs:
-    image: ipfs/go-ipfs
+    image: ipfs/kubo
+    volumes:
+      - ./ipfs_config:/data/ipfs
     ports:
       - "4001:4001"
       - "5001:5001"
       - "8080:8080"
 
   psql:
+    restart: always
     image: postgres
     environment:
       POSTGRES_USER: locallookup

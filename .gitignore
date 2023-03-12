@@ -4,6 +4,8 @@ node_modules
 /build
 /data
 chainData
+blocks
+datastore
 
 
 # local env files

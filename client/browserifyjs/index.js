@@ -4,7 +4,7 @@ import ipfsClient from 'ipfs-http-client';
 const ipfs = ipfsClient('http://localhost:5001/api/v0');
 
 var serverURL = 'http://localhost:5000'
-var namespaceURL = 'http://localhost:3000' 
+var namespaceURL = 'http://localhost:3000'
 let msgStream;
 
 const getAESKey = async (username, password) => {
@@ -58,6 +58,11 @@ const encryptMessage = async (message, aesKey) => {
         message
     );
     return { AESKey, IV, encryptedMessage };
+}
+
+const getMessageFromIPFSUI = async (username, content_address) => {
+    let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64')
+    return getMessageFromIPFS(username, privateKey, content_address)
 }
 
 const getMessageFromIPFS = async (username, privateKey, content_address) => {
@@ -180,7 +185,7 @@ const registerUser = async (username, email, password) => {
     let publicKeyString = publicKey.toString('base64');
     let encryptedPrivateKeyString = Buffer.from(encryptedPrivateKey).toString('base64');
 
-    let response = await fetch(namespaceURL + "/" + username, {
+    let response = await fetch(namespaceURL + "/u/" + username, {
         method: 'POST',
         cache: 'no-cache',
         headers: {
@@ -203,14 +208,13 @@ const registerUser = async (username, email, password) => {
 const loginUser = async (username, password) => {
     let AESKey = await getAESKey(username, password)
     let iv = Buffer.from((username + 'username12345678901234567890').slice(0, 16));
-    let response = await fetch(namespaceURL + "/" + username, {
+    let response = await fetch(namespaceURL + "/u/" + username, {
         method: "GET",
         cache: "no-cache"
     })
 
     if (response.ok) {
         let keyPair = await response.json()
-        console.log(Buffer.from(keyPair['private_key'], 'base64'),AESKey)
         let decryptedPrivateKey = await crypto.subtle.decrypt(
             {
                 name: "AES-CBC",
@@ -218,7 +222,7 @@ const loginUser = async (username, password) => {
             },
             AESKey,
             Buffer.from(keyPair['private_key'], 'base64')
-        ).catch((err)=>console.log("decrypt:",err) );
+        )
         saveUserKeys(username, keyPair['public_key'], Buffer.from(decryptedPrivateKey).toString('base64'));
         return true;
     } else {
@@ -241,7 +245,7 @@ const sendMessage = async (receiver, message) => {
 
         // get public key if not in storage
         if (receiverPublicKey == null || receiverPublicKey == undefined) {
-            let getPublicKeyResponse = await fetch(serverURL + "/get-public-key/" + receiver, {
+            let getPublicKeyResponse = await fetch(namespaceURL + "/p/" + receiver, {
                 method: "GET",
                 cache: "no-cache"
             });
@@ -317,7 +321,6 @@ const getMessages = async (timestamp) => {
                 }
             }
         }
-
         return allMessages
     }
 }
@@ -326,7 +329,7 @@ const getMessagesStream = () => {
     try {
         // close msg stream if exists
         msgStream.close()
-    } catch(exception){
+    } catch (exception) {
         // msgStream not already present
     }
     if (sessionStorage.getItem("username") != null) {
@@ -621,7 +624,8 @@ window.serverconnect = {
     'loginUser': loginUser,
     'sendMessage': sendMessage,
     'getMessages': getMessages,
-    'getMessagesStream':getMessagesStream,
+    'getMessagesStream': getMessagesStream,
     'createGroup': createGroup,
-    'updateGroupUserList' : updateGroupUserList
+    'updateGroupUserList': updateGroupUserList,
+    'getMessageFromIPFSUI': getMessageFromIPFSUI
 }

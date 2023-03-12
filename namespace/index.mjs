@@ -9,7 +9,7 @@ app.use(bodyParser.json());
 app.use(cors());
 const port = 3000;
 
-app.get('/:userId', async (req, res) => {
+app.get('/u/:userId', async (req, res) => {
     const userDetails = await databaseContract.getUserInfo(req.params.userId);
     // user does not exist
     if (userDetails[0] == "") {
@@ -25,7 +25,7 @@ app.get('/:userId', async (req, res) => {
     }
 });
 
-app.post('/:userId', async (req, res) => {
+app.post('/u/:userId', async (req, res) => {
 
     const userId = req.params.userId;
     const privateKey = Buffer.from(req.body.private_key,'base64');
@@ -68,6 +68,17 @@ app.post('/:userId', async (req, res) => {
             publicKey
         );
         res.json(result);
+    }
+});
+
+app.get('/p/:userId', async (req,res) => {
+    const userDetails = await databaseContract.getUserInfo(req.params.userId);
+    // user does not exist
+    if (userDetails[0] == "") {
+        res.sendStatus(404);
+    }
+    else {
+        res.send(Buffer.from(userDetails[2].substring(2), 'hex').toString('base64'));
     }
 });
 

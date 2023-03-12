@@ -33,6 +33,8 @@ var listeners map[string]chan Message
 func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	db = db_
 	msgChannel = _msgChannel
+	listeners = make(map[string]chan Message)
+	go messageRelay()
 	activeListeners = make(chan Listener)
 
 	service := gin.Default()
@@ -47,8 +49,6 @@ func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	port := "5000"
 	address := ip + ":" + port
 	service.Run(address)
-
-	go messageRelay()
 }
 
 func messageRelay() {
@@ -59,6 +59,9 @@ func messageRelay() {
 		case message := <-msgChannel:
 			if listeners[message.Receiver] != nil {
 				listeners[message.Receiver] <- message
+			}
+			if listeners[message.Sender] != nil {
+				listeners[message.Sender] <- message
 			}
 		case listener := <-closeListener:
 			if listeners[listener.Username] != nil {
