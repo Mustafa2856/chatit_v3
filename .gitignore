@@ -12,6 +12,8 @@ datastore
 .env.local
 .env.*.local
 
+CONTRACT_ADDRESS
+
 # Log files
 npm-debug.log*
 yarn-debug.log*

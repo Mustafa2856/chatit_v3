@@ -28,8 +28,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     },
     {
       "inputs": [
@@ -88,8 +87,7 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function",
-      "constant": true
+      "type": "function"
     }
   ],
   "metadata": "{\"compiler\":{\"version\":\"0.8.17+commit.8df45f5f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_username\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"_private_key\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"_public_key\",\"type\":\"bytes\"}],\"name\":\"addUserInfo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_username\",\"type\":\"string\"}],\"name\":\"getUserInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"string\",\"name\":\"username\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"private_key\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"public_key\",\"type\":\"bytes\"}],\"internalType\":\"struct Database.UserInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"name\":\"userinfo\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"username\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"private_key\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"public_key\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"project:/contracts/Database.sol\":\"Database\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":false,\"runs\":200},\"remappings\":[]},\"sources\":{\"project:/contracts/Database.sol\":{\"keccak256\":\"0x219a833124aefea6a84a101fbfd9af3c9e0af1209e8fb311ce9de8a0081816be\",\"urls\":[\"bzz-raw://4bdc01eb71c0fccdfe1d0c1f148a623f0762d43aa0a6c9460d0505e02eff9d38\",\"dweb:/ipfs/QmZDXCuKwBaD91yQT2E3DG48CebJ2vVbhoBqYofifuMMPY\"]}},\"version\":1}",
@@ -10160,8 +10158,7 @@
     }
   },
   "schemaVersion": "3.4.11",
-  "updatedAt": "2023-02-12T06:57:39.497Z",
-  "networkType": "ethereum",
+  "updatedAt": "2023-03-15T08:44:26.472Z",
   "devdoc": {
     "kind": "dev",
     "methods": {},
