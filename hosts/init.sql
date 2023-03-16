@@ -4,9 +4,12 @@ DROP FUNCTION IF EXISTS new_message_trigger;
 CREATE TABLE messages (
      content_address TEXT PRIMARY KEY,
      sender TEXT,
+     group_id BYTEA,
+     group_version INT,
      receiver TEXT,
      sent_time TIMESTAMP,
-     signature BYTEA
+     signature BYTEA,
+     is_group BOOLEAN
 );
 
 CREATE UNIQUE INDEX messages_index ON messages (content_address) INCLUDE (sender, receiver, sent_time);

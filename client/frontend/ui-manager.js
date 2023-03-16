@@ -1,7 +1,7 @@
 let lastMessageTimestamp = 1;
 let messagesBuffer = {};
 let userList = [];
-let groupList = {};
+let groupList = [];
 var msgStream;
 
 const login = async (username, password) => {
@@ -15,10 +15,22 @@ const register = async (username, email, password) => {
 }
 
 const sendMessage = async () => {
-  let username = sessionStorage.getItem("userMessageWindow");
+  let isGroup = sessionStorage.getItem("isGroup");
   let message = document.getElementById("messageInput").value;
-  if (username == "") return;
-  await serverconnect.sendMessage(username, message);
+  if (isGroup == "true") {
+    let group = sessionStorage.getItem("groupMessageWindow")
+    if (group == null || group == undefined) return;
+    group = group.split(",");
+    let groupid = group[0];
+    let version = group[1];
+    if (groupid == "") return;
+    await serverconnect.sendGroupMessage(groupid, version, message);
+  } else {
+    let username = sessionStorage.getItem("userMessageWindow");
+    if (username == "") return;
+    await serverconnect.sendMessage(username, message);
+  }
+  document.getElementById("messageInput").value = "";
 }
 
 const getMessages = async () => {
@@ -32,36 +44,65 @@ const getMessages = async () => {
     }
     if (lastMessageTimestamp < response[user][response[user].length - 1].timestamp)
       lastMessageTimestamp = response[user][response[user].length - 1].timestamp;
-    addUserToChat(user);
+    if (!response[user][0].is_group) addUserToChat(user);
   }
   try {
-    sessionStorage.setItem("userMessageWindow", Object.keys(response)[0])
     document.getElementById("messageWindow").innerHTML = ""
   } catch (error) {
     // no messages
   }
 }
 
+const getGroups = async () => {
+  let list = await serverconnect.getGroupList();
+  let innerHTML = "";
+  for (let group of list) {
+    innerHTML += `<li class="p-2 border-bottom" id='${group.id}' 
+    onclick='sessionStorage.setItem("groupMessageWindow","${group.id},${group.version}");sessionStorage.setItem("isGroup","true");updateMessageListUI()'>
+    <div class="d-flex flex-row">
+      <div class="pt-1">
+        <p class="fw-bold mb-0">${group.name}</p>
+      </div>
+    </div>
+  </li>`;
+  }
+  document.getElementById("groupList").innerHTML = innerHTML;
+}
+
 const updateMessagesBuffer = async (msg) => {
   let username = sessionStorage.getItem('username')
-  msg.body = await serverconnect.getMessageFromIPFSUI(username, msg.content_address)
+  if (msg.is_group) {
+    msg.body = await serverconnect.getGroupMessageFromIPFSUI(msg.groupid, msg.group_version, username, msg.content_address);
+  } else {
+    msg.body = await serverconnect.getMessageFromIPFSUI(username, msg.content_address)
+  }
   let user = msg.sender
-  if(msg.sender == username)user = msg.receiver
+  if (msg.sender == username) user = msg.receiver
+  if (msg.is_group) user = msg.groupid;
   if (messagesBuffer[user]) {
     messagesBuffer[user] = messagesBuffer[user].concat([msg])
   } else {
     messagesBuffer[user] = [msg]
   }
-  addUserToChat(user);
+  if(!msg.is_group)addUserToChat(user);
 }
 
 const updateMessageListUI = () => {
+  let isGroup = sessionStorage.getItem("isGroup");
   let sender = sessionStorage.getItem("userMessageWindow");
+  let group = sessionStorage.getItem("groupMessageWindow");
   let receiver = sessionStorage.getItem("username");
   let messagesList = messagesBuffer[sender];
   let innerHTML = "";
 
-  if (!messagesList) return;
+  if (isGroup == "true") {
+    messagesList = messagesBuffer[group.split(",")[0]];
+  }
+
+  if (!messagesList) {
+    document.getElementById("messageWindow").innerHTML = "";
+    return;
+  }
   for (var message of messagesList) {
     if (receiver == message.sender) {
       let sentMessageCardHtml =
@@ -118,36 +159,10 @@ const getStringTime = (timestamp) => {
 
 const addUserToChat = (user) => {
   if (user == "") return;
-  // TODO :: fix groups in namespcae first
-  // if (user.startsWith("group-")) {
-  //   user = user.slice(6)
-  //   let groupname = user.slice(user.indexOf("-") + 1)
-  //   let groupid = parseInt(user.slice(0, user.indexOf("-")))
-  //   if (groupList[groupname] != undefined) {
-  //     if (groupList[groupname] < groupid) groupList[groupname] = groupid;
-  //     return;
-  //   }
-  //   groupList[groupname] = groupid
-  //   let htmlString1 = "<li class=\"p-2 border-bottom\" id='group-";
-  //   let htmlString2 = "' onclick='sessionStorage.setItem(\"userMessageWindow\",\"group-";
-  //   let htmlString3 = "\");getMessagesOfUser(\"group-";
-  //   let htmlString4 = "\")'>\
-  //       <div class=\"d-flex flex-row\">\
-  //         <div class=\"pt-1\">\
-  //           <p class=\"fw-bold mb-0\">";
-  //   let htmlString5 = "</p>\
-  //         </div>\
-  //       </div>\
-  //   </li>";
-  //   let innerHTML = "";
-  //   innerHTML += htmlString1 + user + htmlString2 + user + htmlString3 + user + htmlString4 + groupname + htmlString5;
-  //   document.getElementById("userList").innerHTML += innerHTML;
-  //   return
-  // }
   if (userList.includes(user)) return;
   userList.push(user);
   let innerHTML =
-    `<li class="p-2 border-bottom" id='${user}' onclick='sessionStorage.setItem("userMessageWindow","${user}");updateMessageListUI()'>
+    `<li class="p-2 border-bottom" id='${user}' onclick='sessionStorage.setItem("isGroup","false");sessionStorage.setItem("userMessageWindow","${user}");updateMessageListUI()'>
   <div class="d-flex flex-row">
     <div class="pt-1">
       <p class="fw-bold mb-0">${user}</p>
@@ -159,6 +174,8 @@ const addUserToChat = (user) => {
 
 const createGroup = async (groupname, userList) => {
   userList = userList.split(", ")
-  groupname = await serverconnect.createGroup(groupname, userList)
-  if (groupname != undefined) addUserToChat(groupname)
+  group = await serverconnect.createGroup(groupname, userList)
+  if (group) {
+    getGroups();
+  }
 }

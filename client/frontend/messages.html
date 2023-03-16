@@ -15,6 +15,7 @@
         stream.onmessage = (msg) => {
           updateMessagesBuffer(JSON.parse(msg.data)).then(updateMessageListUI);
         }
+        getGroups();
       })
     }
   </script>
@@ -60,10 +61,14 @@
             <div class="card-body">
               <input type="text" id="newUser" />
               <button onclick="addUserToChat(document.getElementById('newUser').value)">+</button>
-              <ul class="list-unstyled mb-0" id="userList" style="overflow-y: scroll;overflow-x: hidden;height: 60vh;">
+              <h6>Users: </h6>
+              <ul class="list-unstyled mb-0" id="userList" style="overflow-y: scroll;overflow-x: hidden;height: 25vh;">
                 <!-- added by getMessages -->
               </ul>
-
+              <h6>Groups: </h6>
+              <ul class="list-unstyled mb-0" id="groupList" style="overflow-y: scroll;overflow-x: hidden;height: 25vh;">
+                <!-- added by getGroups -->
+              </ul>
             </div>
           </div>
           <div class="card">

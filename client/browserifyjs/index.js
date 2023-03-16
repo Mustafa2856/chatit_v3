@@ -1,5 +1,6 @@
 import { decrypt, generatePrivate, getPublic, encrypt, sign } from 'eccrypto';
 import ipfsClient from 'ipfs-http-client';
+import { version } from 'typescript';
 
 const ipfs = ipfsClient('http://localhost:5001/api/v0');
 
@@ -65,6 +66,11 @@ const getMessageFromIPFSUI = async (username, content_address) => {
     return getMessageFromIPFS(username, privateKey, content_address)
 }
 
+const getGroupMessageFromIPFSUI = async (groupid, version, username, content_address) => {
+    let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64')
+    return getGroupMessageFromIPFS(groupid, version, username, privateKey, content_address);
+}
+
 const getMessageFromIPFS = async (username, privateKey, content_address) => {
     let body = ipfs.get(content_address)
     for await (const byte of ipfs.get(content_address)) {
@@ -111,21 +117,19 @@ const getMessageFromIPFS = async (username, privateKey, content_address) => {
     return Buffer.from(decryptedMessage).toString()
 }
 
-const getGroupMessageFromIPFS = async (group, username, privateKey, content_address) => {
-    group = group.slice(6)
-    let groupid = group.slice(0, group.indexOf("-"))
-    let groupAESKey = sessionStorage.getItem('aeskey-' + group + username);
-
+const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, content_address) => {
+    let groupAESKey = sessionStorage.getItem('aeskey-' + groupid + "/" + version + username);
+    let groupidURL = groupid.replace("/","_");
     // get group aes key if not in storage
     if (groupAESKey == null || groupAESKey == undefined) {
-        let getAESKeyResponse = await fetch(serverURL + "/group-aes-key/" + groupid + "/" + username, {
+        let getAESKeyResponse = await fetch(namespaceURL + "/g/k/" + groupidURL + "/" + version + "/" + username, {
             method: "GET",
             cache: "no-cache"
         });
 
         if (getAESKeyResponse.ok) {
             groupAESKey = await getAESKeyResponse.text()
-            sessionStorage.setItem('aeskey-' + group + username, groupAESKey)
+            sessionStorage.setItem('aeskey-' + groupid + "/" + version + "/" + username, groupAESKey)
             groupAESKey = Buffer.from(groupAESKey, 'base64');
         } else return;
     } else {
@@ -234,10 +238,6 @@ const loginUser = async (username, password) => {
 const sendMessage = async (receiver, message) => {
     // if logged in
     if (sessionStorage.getItem('username') != null) {
-        if (receiver.startsWith("group-")) {
-            await sendGroupMessage(receiver, message)
-            return
-        }
         let sender = sessionStorage.getItem('username');
         let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64');
         let senderPublicKey = Buffer.from(sessionStorage.getItem('publicKey'), 'base64');
@@ -293,8 +293,11 @@ const sendMessage = async (receiver, message) => {
             body: JSON.stringify({
                 'content_address': response.path,
                 'sender': sender,
+                'groupid': Buffer.from([]).toString('base64'),
+                'group_version': 0,
                 'receiver': receiver,
-                'signature': signature.toString('base64')
+                'signature': signature.toString('base64'),
+                'is_group': false
             })
         });
     }
@@ -311,15 +314,15 @@ const getMessages = async (timestamp) => {
         let allMessages = await response.json()
         // get message body for each message
         for (var user in allMessages) {
-            if (user.startsWith("group-")) {
-                for (var message of allMessages[user]) {
-                    message["body"] = await getGroupMessageFromIPFS(user, username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message["content_address"])
+            for (var message of allMessages[user]) {
+                if (message.is_group) {
+                    message.body = await getGroupMessageFromIPFS(message.groupid, message.group_version, username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message.content_address)
                 }
-            } else {
-                for (var message of allMessages[user]) {
-                    message["body"] = await getMessageFromIPFS(username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message["content_address"])
+                else {
+                    message.body = await getMessageFromIPFS(username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message.content_address)
                 }
             }
+
         }
         return allMessages
     }
@@ -338,7 +341,6 @@ const getMessagesStream = () => {
         return msgStream
     }
     throw new Error("user not logged in!")
-    return null
 }
 
 const createGroup = async (groupName, userList) => {
@@ -362,13 +364,15 @@ const createGroup = async (groupName, userList) => {
         let needPublicKeys = []
         let user
         for (user of userList) {
+            if (user.length <= 1)
+                continue;
             if (sessionStorage.getItem('pkey-' + user) != null) {
                 continue;
             }
             needPublicKeys.push(user)
         }
         if (needPublicKeys.length > 0) {
-            let publicKeys = await fetch(serverURL + "/get-public-key-list", {
+            let publicKeys = await fetch(namespaceURL + "/p-list", {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -388,6 +392,8 @@ const createGroup = async (groupName, userList) => {
         let encryptedAESKey
         let iv
         for (user of userList) {
+            if (user.length <= 1)
+                continue;
             iv = crypto.getRandomValues(new Uint8Array(16))
             encryptedAESKey = await encrypt(Buffer.from(sessionStorage.getItem('pkey-' + user), 'base64'), AESKeyBytes, { iv: iv })
 
@@ -413,14 +419,12 @@ const createGroup = async (groupName, userList) => {
         }
 
         // sign and send request to service
-        let hashString = ""
-        for (user of UserKeyList) {
-            hashString += user.username
-        }
-        let hash = await crypto.subtle.digest("SHA-256", Buffer.from(hashString))
-        hash = Buffer.from(hash)
+        let hashString = username + JSON.stringify([{ username: username, aes_key: encryptedAESKey }]) + groupName + JSON.stringify(UserKeyList);
+        let hash = await crypto.subtle.digest("SHA-256", Buffer.from(hashString));
+        hash = Buffer.from(hash);
         let signature = await sign(privateKey, hash);
-        let response = await fetch(serverURL + "/create-group", {
+
+        let response = await fetch(namespaceURL + "/g/create", {
             method: 'POST',
             cache: 'no-cache',
             headers: {
@@ -430,14 +434,16 @@ const createGroup = async (groupName, userList) => {
             referrerPolicy: 'no-referrer',
             body: JSON.stringify({
                 'username': username,
-                'aes_key': encryptedAESKey,
+                'admin_users': [{ username: username, aes_key: encryptedAESKey }],
                 'group_name': groupName,
-                'user_list': UserKeyList,
+                'other_users': UserKeyList,
                 'signature': signature.toString('base64')
             })
         });
-        let group_name = await response.text();
-        return group_name
+        if (await response.ok) {
+            return groupName;
+        }
+        return null;
     }
 }
 
@@ -468,7 +474,7 @@ const updateGroupUserList = async (groupName, userList) => {
             needPublicKeys.push(user)
         }
         if (needPublicKeys.length > 0) {
-            let publicKeys = await fetch(serverURL + "/get-public-key-list", {
+            let publicKeys = await fetch(namespaceURL + "/p-list", {
                 method: 'POST',
                 cache: 'no-cache',
                 headers: {
@@ -513,14 +519,12 @@ const updateGroupUserList = async (groupName, userList) => {
         }
 
         // sign and send request to service
-        let hashString = ""
-        for (user of UserKeyList) {
-            hashString += user.username
-        }
-        let hash = await crypto.subtle.digest("SHA-256", Buffer.from(hashString))
-        hash = Buffer.from(hash)
+        let hashString = username + JSON.stringify([{ username: username, aes_key: encryptedAESKey }]) + groupName + JSON.stringify(UserKeyList);
+        let hash = await crypto.subtle.digest("SHA-256", Buffer.from(hashString));
+        hash = Buffer.from(hash);
         let signature = await sign(privateKey, hash);
-        let response = await fetch(serverURL + "/update-group-user-list", {
+
+        let response = await fetch(namespaceURL + "/g/create", {
             method: 'POST',
             cache: 'no-cache',
             headers: {
@@ -530,9 +534,9 @@ const updateGroupUserList = async (groupName, userList) => {
             referrerPolicy: 'no-referrer',
             body: JSON.stringify({
                 'username': username,
-                'aes_key': encryptedAESKey,
+                'admin_users': [{ username: username, aes_key: encryptedAESKey }],
                 'group_name': groupName,
-                'user_list': UserKeyList,
+                'other_users': UserKeyList,
                 'signature': signature.toString('base64')
             })
         });
@@ -541,23 +545,43 @@ const updateGroupUserList = async (groupName, userList) => {
     }
 }
 
-const sendGroupMessage = async (group, message) => {
-    group = group.slice(6)
-    let groupid = group.slice(0, group.indexOf("-"))
+const getGroupList = async () => {
+    if (sessionStorage.getItem("username") != null) {
+        let username = sessionStorage.getItem("username");
+        let response = await fetch(namespaceURL + "/g/u/" + username, {
+            method: "GET",
+            cache: "no-cache"
+        });
+        let groupList = [];
+        if (response.ok) {
+            groupList = await response.json();
+        }
+        for (let group of groupList) {
+            sessionStorage.setItem('aeskey-' + group.id + "/" + group.version + username, group.key);
+            let allUsers = group.admin_users.concat(group.other_users);
+            sessionStorage.setItem('group-users-' + group.id + "/" + group.version, allUsers.join());
+        }
+        return groupList;
+    }
+    return [];
+}
+
+const sendGroupMessage = async (groupid, groupversion, message) => {
     let sender = sessionStorage.getItem('username');
     let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64');
-    let groupAESKey = sessionStorage.getItem('aeskey-' + group + sender);
+    let groupAESKey = sessionStorage.getItem('aeskey-' + groupid + "/" + groupversion + sender);
+    let groupidURL = groupid.replace("/","_");
 
     // get group aes key if not in storage
     if (groupAESKey == null || groupAESKey == undefined) {
-        let getAESKeyResponse = await fetch(serverURL + "/group-aes-key/" + groupid + "/" + sender, {
+        let getAESKeyResponse = await fetch(namespaceURL + "/g/k/" + groupidURL + "/" + groupversion + "/" + sender, {
             method: "GET",
             cache: "no-cache"
         });
 
         if (getAESKeyResponse.ok) {
             groupAESKey = await getAESKeyResponse.text()
-            sessionStorage.setItem('aeskey-' + group + sender, groupAESKey)
+            sessionStorage.setItem('aeskey-' + groupid + "/" + groupversion + sender, groupAESKey)
             groupAESKey = Buffer.from(groupAESKey, 'base64');
         } else return;
     } else {
@@ -581,29 +605,44 @@ const sendGroupMessage = async (group, message) => {
     // final content to upload to ipfs
     let finalMessage =
         sender + '\n'
-        + 'group-' + group + '\n'
+        + groupid + '\n'
         + Buffer.from(IV).toString('base64') + '\n'
         + Buffer.from(encryptedMessage).toString('base64');
     let response = await ipfs.add(Buffer.from(finalMessage));
     let content_address_clipped = Buffer.from(response.path).subarray(0, 32);
 
+    let userList = sessionStorage.getItem('group-users-' + groupid + "/" + groupversion)
+
+    if (userList == null || userList == undefined) {
+
+    } else {
+        userList = userList.split(",")
+    }
+
     // sign and send cid to service
     let signature = await sign(privateKey, content_address_clipped);
-    await fetch(serverURL + "/send-message", {
-        method: 'POST',
-        cache: 'no-cache',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        redirect: 'follow',
-        referrerPolicy: 'no-referrer',
-        body: JSON.stringify({
-            'content_address': response.path,
-            'sender': sender,
-            'receiver': 'group-' + group,
-            'signature': signature.toString('base64')
-        })
-    });
+
+    for (let user of userList) {
+        if(user == sender)continue;
+        await fetch(serverURL + "/send-message", {
+            method: 'POST',
+            cache: 'no-cache',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            redirect: 'follow',
+            referrerPolicy: 'no-referrer',
+            body: JSON.stringify({
+                'content_address': response.path,
+                'sender': sender,
+                'groupid': groupid,
+                'group_version':parseInt(groupversion),
+                'receiver': user,
+                'signature': signature.toString('base64'),
+                'is_group': true
+            })
+        });
+    }
 }
 
 const tryBadMac = async (privateKey, publicKey) => {
@@ -627,5 +666,8 @@ window.serverconnect = {
     'getMessagesStream': getMessagesStream,
     'createGroup': createGroup,
     'updateGroupUserList': updateGroupUserList,
-    'getMessageFromIPFSUI': getMessageFromIPFSUI
+    'getMessageFromIPFSUI': getMessageFromIPFSUI,
+    'getGroupMessageFromIPFSUI': getGroupMessageFromIPFSUI,
+    'getGroupList': getGroupList,
+    'sendGroupMessage': sendGroupMessage
 }
