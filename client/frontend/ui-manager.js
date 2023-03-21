@@ -2,6 +2,7 @@ let lastMessageTimestamp = 1;
 let messagesBuffer = {};
 let userList = [];
 let groupList = [];
+let seenAESKeys = [];
 var msgStream;
 
 const login = async (username, password) => {
@@ -37,10 +38,13 @@ const getMessages = async () => {
   let response = await serverconnect.getMessages(1);
   messagesBuffer = {};
   for (user in response) {
-    if (messagesBuffer[user]) {
-      messagesBuffer[user] = messagesBuffer[user].concat(response[user])
-    } else {
-      messagesBuffer[user] = response[user]
+    if (messagesBuffer[user] == null || messagesBuffer[user] == undefined) {
+      messagesBuffer[user] = [];
+    }
+    for(let _msg of response[user]) {
+      if(seenAESKeys[_msg.content_address] == true)continue;
+      messagesBuffer[user] = messagesBuffer[user].concat([_msg])
+      seenAESKeys[_msg.content_address] = true;
     }
     if (lastMessageTimestamp < response[user][response[user].length - 1].timestamp)
       lastMessageTimestamp = response[user][response[user].length - 1].timestamp;
@@ -70,7 +74,9 @@ const getGroups = async () => {
 }
 
 const updateMessagesBuffer = async (msg) => {
-  let username = sessionStorage.getItem('username')
+  let username = sessionStorage.getItem('username');
+  if(seenAESKeys[msg.content_address] == true)return;
+  seenAESKeys[msg.content_address] = true;
   if (msg.is_group) {
     msg.body = await serverconnect.getGroupMessageFromIPFSUI(msg.groupid, msg.group_version, username, msg.content_address);
   } else {

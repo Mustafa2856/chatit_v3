@@ -2,11 +2,13 @@ version: '3'
 
 services:
   namespace:
+    restart: unless-stopped
     build: ./namespace
     ports:
       - "3000:3000"
 
   hosts:
+    restart: unless-stopped
     build: ./hosts
     ports:
       - "5000:5000"
@@ -21,15 +23,17 @@ services:
 
   ipfs:
     image: ipfs/kubo
+    restart: unless-stopped
     volumes:
       - ./ipfs_config:/data/ipfs
+      - ./client/frontend:/data/chatit
     ports:
       - "4001:4001"
       - "5001:5001"
       - "8080:8080"
 
   psql:
-    restart: always
+    restart: unless-stopped
     image: postgres
     environment:
       POSTGRES_USER: locallookup

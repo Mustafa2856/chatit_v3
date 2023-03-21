@@ -2,17 +2,18 @@ DROP TABLE IF EXISTS messages;
 DROP FUNCTION IF EXISTS new_message_trigger;
 
 CREATE TABLE messages (
-     content_address TEXT PRIMARY KEY,
+     content_address TEXT,
      sender TEXT,
      group_id BYTEA,
      group_version INT,
      receiver TEXT,
      sent_time TIMESTAMP,
      signature BYTEA,
-     is_group BOOLEAN
+     is_group BOOLEAN,
+     PRIMARY KEY (content_address, receiver)
 );
 
-CREATE UNIQUE INDEX messages_index ON messages (content_address) INCLUDE (sender, receiver, sent_time);
+CREATE UNIQUE INDEX messages_index ON messages (content_address, receiver) INCLUDE (sender, sent_time);
 
 CREATE FUNCTION new_message_trigger()
 RETURNS TRIGGER AS $$
