@@ -7,7 +7,7 @@ docker-compose up --build
 
 ### TODO:
 
-- [ ]MIME
+- [ ] MIME
 - [ ] MIME captioning
 - [ ] host and namespace node selector
 - [ ] group and userinfo page
