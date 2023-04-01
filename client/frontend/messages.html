@@ -36,7 +36,7 @@
 
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
+        <li class="nav-item">
           <a class="nav-link" href="index.html">Home</a>
         </li>
         <li class="nav-item">
@@ -44,7 +44,7 @@
         </li>
         </li>
         <li class="nav-item">
-          <a class="nav-link disabled" href="messages.html">Chat</a>
+          <a class="nav-link active" href="messages.html">Chat</a>
         </li>
       </ul>
     </div>
@@ -87,14 +87,48 @@
             <!-- added by getMessageOfUser -->
           </ul>
           <div id="messageInputWindow" style="height: 30vh;">
-            <div class="bg-white mb-3">
-              <div class="form-outline">
-                <textarea class="form-control" id="messageInput" rows="4"></textarea>
+            <div class="input-group mb-3">
+              <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#attachFileModal">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                  class="bi bi-paperclip" viewBox="0 0 16 16">
+                  <path
+                    d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z" />
+                </svg>
+              </button>
+              <!-- Modal -->
+              <div class="modal fade" id="attachFileModal" tabindex="-1" aria-labelledby="exampleModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="exampleModalLabel">Attach File</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <input class="form-control" type="file" id="fileInput"/>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                      <button type="button" class="btn btn-outline-primary btn-rounded float-end" data-bs-dismiss="modal" onclick="sendMessageFile()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                          class="bi bi-send-fill" viewBox="0 0 16 16">
+                          <path
+                            d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+              <textarea class="form-control" id="messageInput"></textarea>
+              <button type="button" class="btn btn-outline-primary btn-rounded float-end" onclick="sendMessage()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                  class="bi bi-send-fill" viewBox="0 0 16 16">
+                  <path
+                    d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z" />
+                </svg>
+              </button>
             </div>
-            <button type="button" class="btn btn-info btn-rounded float-end" onclick="sendMessage()">
-              Send
-            </button>
           </div>
         </div>
 

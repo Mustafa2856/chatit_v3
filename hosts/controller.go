@@ -13,6 +13,7 @@ import (
 
 type Message struct {
 	ContentAddress string `json:"content_address" binding:"required"`
+	ContentType    string `json:"content_type" binding:"required"`
 	Sender         string `json:"sender" binding:"required"`
 	GroupId        []byte `json:"groupid" binding:"required"`
 	GroupVersion   uint64 `json:"group_version"`
@@ -91,8 +92,9 @@ func sendMessage(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 	} else {
 		// message verified from sender
-		if _, err := db.Exec("INSERT INTO messages (content_address, sender, group_id, group_version, receiver, sent_time, signature, is_group) VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP,$6,$7)",
+		if _, err := db.Exec("INSERT INTO messages (content_address, content_type, sender, group_id, group_version, receiver, sent_time, signature, is_group) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,$7,$8)",
 			request.ContentAddress,
+			request.ContentType,
 			request.Sender,
 			request.GroupId,
 			request.GroupVersion,
@@ -120,7 +122,7 @@ func getMessages(c *gin.Context) {
 		}
 		response := map[string][]Message{}
 		var message Message
-		sentMessageRows, err := db.Query("SELECT content_address, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE sender = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		sentMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE sender = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
 		if err != nil {
 			println(err.Error())
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -129,6 +131,7 @@ func getMessages(c *gin.Context) {
 		for sentMessageRows.Next() {
 			sentMessageRows.Scan(
 				&message.ContentAddress,
+				&message.ContentType,
 				&message.Sender,
 				&message.GroupId,
 				&message.GroupVersion,
@@ -152,7 +155,7 @@ func getMessages(c *gin.Context) {
 				response[message.Receiver] = messageList
 			}
 		}
-		receivedMessageRows, err := db.Query("SELECT content_address, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE receiver = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		receivedMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE receiver = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
@@ -160,6 +163,7 @@ func getMessages(c *gin.Context) {
 		for receivedMessageRows.Next() {
 			receivedMessageRows.Scan(
 				&message.ContentAddress,
+				&message.ContentType,
 				&message.Sender,
 				&message.GroupId,
 				&message.GroupVersion,

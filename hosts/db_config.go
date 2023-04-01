@@ -45,10 +45,11 @@ func listenDB(db *sql.DB, listener *pq.Listener, channel string, newMessageChann
 			continue
 		}
 		content_address := e.Extra
-		row := db.QueryRow("SELECT content_address, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE content_address = $1", content_address)
+		row := db.QueryRow("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE content_address = $1", content_address)
 		var newMessage Message
 		if err := row.Scan(
 			&newMessage.ContentAddress,
+			&newMessage.ContentType,
 			&newMessage.Sender,
 			&newMessage.GroupId,
 			&newMessage.GroupVersion,

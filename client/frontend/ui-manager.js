@@ -41,8 +41,8 @@ const getMessages = async () => {
     if (messagesBuffer[user] == null || messagesBuffer[user] == undefined) {
       messagesBuffer[user] = [];
     }
-    for(let _msg of response[user]) {
-      if(seenAESKeys[_msg.content_address] == true)continue;
+    for (let _msg of response[user]) {
+      if (seenAESKeys[_msg.content_address] == true) continue;
       messagesBuffer[user] = messagesBuffer[user].concat([_msg])
       seenAESKeys[_msg.content_address] = true;
     }
@@ -75,7 +75,7 @@ const getGroups = async () => {
 
 const updateMessagesBuffer = async (msg) => {
   let username = sessionStorage.getItem('username');
-  if(seenAESKeys[msg.content_address] == true)return;
+  if (seenAESKeys[msg.content_address] == true) return;
   seenAESKeys[msg.content_address] = true;
   if (msg.is_group) {
     msg.body = await serverconnect.getGroupMessageFromIPFSUI(msg.groupid, msg.group_version, username, msg.content_address);
@@ -90,7 +90,7 @@ const updateMessagesBuffer = async (msg) => {
   } else {
     messagesBuffer[user] = [msg]
   }
-  if(!msg.is_group)addUserToChat(user);
+  if (!msg.is_group) addUserToChat(user);
 }
 
 const updateMessageListUI = () => {
@@ -110,7 +110,55 @@ const updateMessageListUI = () => {
     return;
   }
   for (var message of messagesList) {
-    if (receiver == message.sender) {
+    if (message.content_type != "text/plain") {
+      if (receiver == message.sender) {
+        let sentMessageCardHtml =
+          `<li class="d-flex justify-content-end small p-2 ms-3 mb-1 rounded-3 bg">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(223, 243, 255)">
+        <p class="fw-bold mb-0">${message.sender}</p>
+      </div>
+      <div class="card-body" style="background-color:rgb(223, 243, 255)">
+        <h6>File: ${message.content_type.substring(5)}</h6>
+        <button class="btn btn-outline-primary" onclick="downloadFile('${sender}','${message.content_address}')">Download</button>
+        <span class="tooltiptext">
+        Content-Id: ${message.content_address}<br/>
+        Signature:  ${message.signature}
+        </span>
+        <p class="text-muted small mb-0">
+          <i class="far fa-clock"></i>
+          ${getStringTime(message.timestamp)}
+        </p>
+      </div>
+    </div>
+    <div class="d-flex"></div>
+  </li>`;
+        innerHTML = sentMessageCardHtml + innerHTML;
+      } else {
+        let receivedMessageCardHtml =
+          `<li class="d-flex justify-content-start small p-2 ms-3 mb-1 rounded-3 bg">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(229, 255, 223)">
+        <p class="fw-bold mb-0">${message.sender}</p>
+      </div>
+      <div class="card-body" style="background-color:rgb(229, 255, 223)">
+      <h6>File: ${message.content_type.substring(5)}</h6>
+      <button class="btn btn-outline-primary" onclick="downloadFile('${sender}','${message.content_address}')">Download</button>
+        <span class="tooltiptext">
+        Content-Id: ${message.content_address}<br/>
+        Signature:  ${message.signature}
+        </span>
+        <p class="text-muted small mb-0">
+          <i class="far fa-clock"></i>
+          ${getStringTime(message.timestamp)}
+        </p>
+      </div>
+    </div>
+  </li>`;
+        innerHTML = receivedMessageCardHtml + innerHTML;
+      }
+    }
+    else if (receiver == message.sender) {
       let sentMessageCardHtml =
         `<li class="d-flex justify-content-end small p-2 ms-3 mb-1 rounded-3 bg">
   <div class="card">
@@ -183,5 +231,42 @@ const createGroup = async (groupname, userList) => {
   group = await serverconnect.createGroup(groupname, userList)
   if (group) {
     getGroups();
+  }
+}
+
+const sendMessageFile = async () => {
+  let isGroup = sessionStorage.getItem("isGroup");
+  let files = document.getElementById("fileInput").files;
+  if (files.length == 0) return;
+  let fileReader = new FileReader()
+  fileReader.onload = async () => {
+    if (isGroup == "true") {
+      let group = sessionStorage.getItem("groupMessageWindow")
+      if (group == null || group == undefined) return;
+      group = group.split(",");
+      let groupid = group[0];
+      let version = group[1];
+      if (groupid == "") return;
+      await serverconnect.sendGroupMessage(groupid, version, fileReader.result, true, files[0].name);
+    } else {
+      let username = sessionStorage.getItem("userMessageWindow");
+      if (username == "") return;
+      await serverconnect.sendMessage(username, fileReader.result, true, files[0].name);
+    }
+  }
+  fileReader.readAsArrayBuffer(files[0]);
+}
+
+const downloadFile = async (sender, content_address) => {
+  messagesList = messagesBuffer[sender];
+  for (var message of messagesList) {
+    if (message.content_address == content_address) {
+      var blob = new Blob([message.body]);// change resultByte to bytes
+
+      var link = document.createElement('a');
+      link.href = window.URL.createObjectURL(blob);
+      link.download = message.content_type.substring(5);
+      link.click();
+    }
   }
 }

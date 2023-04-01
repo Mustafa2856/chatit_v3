@@ -72,15 +72,15 @@ const getGroupMessageFromIPFSUI = async (groupid, version, username, content_add
 }
 
 const getMessageFromIPFS = async (username, privateKey, content_address) => {
-    let body = ipfs.get(content_address)
+    let body = Buffer.from([]);
     for await (const byte of ipfs.get(content_address)) {
         for await (const content of byte.content) {
-            body = Buffer.from(content).toString()
+            body = Buffer.concat([body,Buffer.from(content)])
         }
     }
 
     //decrypt and structure the message
-    body = body.split("\n")
+    body = body.toString().split("\n")
     let message = { "sender": body[0], "receiver": body[1] };
     let senderIV = Buffer.from(body[2], "base64");
     let receiverIV = Buffer.from(body[3], "base64");
@@ -114,7 +114,7 @@ const getMessageFromIPFS = async (username, privateKey, content_address) => {
     },
         AESKey,
         encryptedMessage)
-    return Buffer.from(decryptedMessage).toString()
+    return Buffer.from(decryptedMessage)
 }
 
 const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, content_address) => {
@@ -235,7 +235,7 @@ const loginUser = async (username, password) => {
     }
 }
 
-const sendMessage = async (receiver, message) => {
+const sendMessage = async (receiver, message, isFile = false, fileName = "") => {
     // if logged in
     if (sessionStorage.getItem('username') != null) {
         let sender = sessionStorage.getItem('username');
@@ -292,6 +292,7 @@ const sendMessage = async (receiver, message) => {
             referrerPolicy: 'no-referrer',
             body: JSON.stringify({
                 'content_address': response.path,
+                'content_type': isFile?'file/'+fileName:'text/plain',
                 'sender': sender,
                 'groupid': Buffer.from([]).toString('base64'),
                 'group_version': 0,
@@ -566,7 +567,7 @@ const getGroupList = async () => {
     return [];
 }
 
-const sendGroupMessage = async (groupid, groupversion, message) => {
+const sendGroupMessage = async (groupid, groupversion, message, isFile = false, fileName = "") => {
     let sender = sessionStorage.getItem('username');
     let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64');
     let groupAESKey = sessionStorage.getItem('aeskey-' + groupid + "/" + groupversion + sender);
@@ -634,6 +635,7 @@ const sendGroupMessage = async (groupid, groupversion, message) => {
             referrerPolicy: 'no-referrer',
             body: JSON.stringify({
                 'content_address': response.path,
+                'content_type': isFile?'file/'+fileName:'text/plain',
                 'sender': sender,
                 'groupid': groupid,
                 'group_version':parseInt(groupversion),

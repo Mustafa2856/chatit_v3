@@ -3,6 +3,7 @@ DROP FUNCTION IF EXISTS new_message_trigger;
 
 CREATE TABLE messages (
      content_address TEXT,
+     content_type TEXT,
      sender TEXT,
      group_id BYTEA,
      group_version INT,
