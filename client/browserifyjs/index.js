@@ -152,15 +152,15 @@ const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, c
         return ""
     }
     // get message body from IPFS
-    let body = ipfs.get(content_address)
+    let body = Buffer.from([]);
     for await (const byte of ipfs.get(content_address)) {
         for await (const content of byte.content) {
-            body = Buffer.from(content).toString()
+            body = Buffer.concat([body,Buffer.from(content)])
         }
     }
 
     //decrypt and structure the message
-    body = body.split("\n")
+    body = body.toString().split("\n")
     let IV = Buffer.from(body[2], "base64");
     let encryptedMessage = Buffer.from(body[3], "base64");
     let decryptedMessage = await crypto.subtle.decrypt({
@@ -169,7 +169,7 @@ const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, c
     },
         groupAESKey,
         encryptedMessage)
-    return Buffer.from(decryptedMessage).toString()
+    return Buffer.from(decryptedMessage)
 }
 
 const registerUser = async (username, email, password) => {

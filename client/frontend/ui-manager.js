@@ -61,8 +61,9 @@ const getGroups = async () => {
   let list = await serverconnect.getGroupList();
   let innerHTML = "";
   for (let group of list) {
-    innerHTML += `<li class="p-2 border-bottom" id='${group.id}' 
-    onclick='sessionStorage.setItem("groupMessageWindow","${group.id},${group.version}");sessionStorage.setItem("isGroup","true");updateMessageListUI()'>
+    innerHTML += `<li class="list-group-item-action p-2 border-bottom" id='${group.id}' 
+    onclick='sessionStorage.setItem("groupMessageWindow","${group.id},${group.version}");sessionStorage.setItem("isGroup","true");updateMessageListUI();
+    sessionStorage.setItem("groupName","${group.name}")'>
     <div class="d-flex flex-row">
       <div class="pt-1">
         <p class="fw-bold mb-0">${group.name}</p>
@@ -99,10 +100,14 @@ const updateMessageListUI = () => {
   let group = sessionStorage.getItem("groupMessageWindow");
   let receiver = sessionStorage.getItem("username");
   let messagesList = messagesBuffer[sender];
+  let groupName = sessionStorage.getItem("groupName");
   let innerHTML = "";
 
   if (isGroup == "true") {
     messagesList = messagesBuffer[group.split(",")[0]];
+    document.getElementById('msgwindowheader').innerHTML = groupName;
+  } else {
+    document.getElementById('msgwindowheader').innerHTML = sender;
   }
 
   if (!messagesList) {
@@ -110,6 +115,10 @@ const updateMessageListUI = () => {
     return;
   }
   for (var message of messagesList) {
+    var bufferIndex = sender;
+    if(isGroup){
+      bufferIndex = group.split(",")[0];
+    }
     if (message.content_type != "text/plain") {
       if (receiver == message.sender) {
         let sentMessageCardHtml =
@@ -120,7 +129,7 @@ const updateMessageListUI = () => {
       </div>
       <div class="card-body" style="background-color:rgb(223, 243, 255)">
         <h6>File: ${message.content_type.substring(5)}</h6>
-        <button class="btn btn-outline-primary" onclick="downloadFile('${sender}','${message.content_address}')">Download</button>
+        <button class="btn btn-outline-primary" onclick="downloadFile('${bufferIndex}','${message.content_address}')">Download</button>
         <span class="tooltiptext">
         Content-Id: ${message.content_address}<br/>
         Signature:  ${message.signature}
@@ -143,7 +152,7 @@ const updateMessageListUI = () => {
       </div>
       <div class="card-body" style="background-color:rgb(229, 255, 223)">
       <h6>File: ${message.content_type.substring(5)}</h6>
-      <button class="btn btn-outline-primary" onclick="downloadFile('${sender}','${message.content_address}')">Download</button>
+      <button class="btn btn-outline-primary" onclick="downloadFile('${bufferIndex}','${message.content_address}')">Download</button>
         <span class="tooltiptext">
         Content-Id: ${message.content_address}<br/>
         Signature:  ${message.signature}
@@ -216,7 +225,7 @@ const addUserToChat = (user) => {
   if (userList.includes(user)) return;
   userList.push(user);
   let innerHTML =
-    `<li class="p-2 border-bottom" id='${user}' onclick='sessionStorage.setItem("isGroup","false");sessionStorage.setItem("userMessageWindow","${user}");updateMessageListUI()'>
+    `<li class="list-group-item-action p-2 border-bottom" id='${user}' onclick='sessionStorage.setItem("isGroup","false");sessionStorage.setItem("userMessageWindow","${user}");updateMessageListUI()'>
   <div class="d-flex flex-row">
     <div class="pt-1">
       <p class="fw-bold mb-0">${user}</p>

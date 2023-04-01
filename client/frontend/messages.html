@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body>
+<body style="overflow-y: hidden;">
   <script src="ui-manager.js"></script>
   <script src="bundle.js"></script>
   <script>
@@ -59,14 +59,16 @@
 
           <div class="card">
             <div class="card-body">
-              <input type="text" id="newUser" />
-              <button onclick="addUserToChat(document.getElementById('newUser').value)">+</button>
-              <h6>Users: </h6>
-              <ul class="list-unstyled mb-0" id="userList" style="overflow-y: scroll;overflow-x: hidden;height: 25vh;">
+              <div class="input-group">
+                <input class="form-control" type="text" id="newUser" />
+                <button class="btn btn-outline-primary" onclick="addUserToChat(document.getElementById('newUser').value)">+</button>
+              </div>
+              <h6 style="margin-top: 1vh;">Users: </h6>
+              <ul class="list-group list-group-flush mb-0" id="userList" style="overflow-y: auto;overflow-x: hidden;height: 25vh;">
                 <!-- added by getMessages -->
               </ul>
               <h6>Groups: </h6>
-              <ul class="list-unstyled mb-0" id="groupList" style="overflow-y: scroll;overflow-x: hidden;height: 25vh;">
+              <ul class="list-group list-group-flush mb-0" id="groupList" style="overflow-y: auto;overflow-x: hidden;height: 25vh;">
                 <!-- added by getGroups -->
               </ul>
             </div>
@@ -82,6 +84,9 @@
 
         <div class="col-md-6 col-lg-7 col-xl-8">
 
+          <div class="card text-center" style="padding: 5px;" id="msgwindowheader">
+            Select or Add User to Send Message
+          </div>
           <ul class="list-unstyled" id="messageWindow"
             style="overflow-y: scroll;overflow-x: hidden;height: 60vh;display:flex;flex-direction: column-reverse;">
             <!-- added by getMessageOfUser -->
