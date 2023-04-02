@@ -9,7 +9,7 @@ import (
 )
 
 func db_setup() (*sql.DB, chan Message) {
-	connString := "postgres://locallookup:1234@host.docker.internal:5432/chatit"
+	connString := "postgres://locallookup:1234@psql:5432/chatit?sslmode=disable"
 	db, err := sql.Open("postgres", connString)
 	if err != nil {
 		panic(err)

@@ -7,20 +7,7 @@ services:
     ports:
       - "3000:3000"
 
-  hosts:
-    restart: unless-stopped
-    build: ./hosts
-    ports:
-      - "5000:5000"
-    links:
-      - psql
-      - namespace
-      - ipfs
-    depends_on:
-      - psql
-      - namespace
-      - ipfs
-
+  
   ipfs:
     image: ipfs/kubo
     restart: unless-stopped
@@ -42,6 +29,18 @@ services:
     volumes:
       - data:/var/lib/postgresql/data
       - ./hosts/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  hosts:
+    restart: unless-stopped
+    build: ./hosts
+    ports:
+      - "5000:5000"
+    links:
+      - psql
+      - namespace
+    depends_on:
+      - psql
+      - namespace
 
 volumes:
   data:

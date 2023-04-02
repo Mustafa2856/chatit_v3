@@ -116,7 +116,7 @@ const updateMessageListUI = () => {
   }
   for (var message of messagesList) {
     var bufferIndex = sender;
-    if(isGroup){
+    if(isGroup == "true"){
       bufferIndex = group.split(",")[0];
     }
     if (message.content_type != "text/plain") {
