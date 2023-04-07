@@ -124,9 +124,6 @@ const updateMessageListUI = () => {
         let sentMessageCardHtml =
           `<li class="d-flex justify-content-end small p-2 ms-3 mb-1 rounded-3 bg">
     <div class="card">
-      <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(223, 243, 255)">
-        <p class="fw-bold mb-0">${message.sender}</p>
-      </div>
       <div class="card-body" style="background-color:rgb(223, 243, 255)">
         <h6>File: ${message.content_type.substring(5)}</h6>
         <button class="btn btn-outline-primary" onclick="downloadFile('${bufferIndex}','${message.content_address}')">Download</button>
@@ -146,10 +143,10 @@ const updateMessageListUI = () => {
       } else {
         let receivedMessageCardHtml =
           `<li class="d-flex justify-content-start small p-2 ms-3 mb-1 rounded-3 bg">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(229, 255, 223)">
-        <p class="fw-bold mb-0">${message.sender}</p>
-      </div>
+    <div class="card">` + (isGroup=="true"?`<div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(229, 255, 223)">
+    <p class="fw-bold mb-0">${message.sender}</p>
+  </div>`:``) + 
+      `
       <div class="card-body" style="background-color:rgb(229, 255, 223)">
       <h6>File: ${message.content_type.substring(5)}</h6>
       <button class="btn btn-outline-primary" onclick="downloadFile('${bufferIndex}','${message.content_address}')">Download</button>
@@ -171,9 +168,6 @@ const updateMessageListUI = () => {
       let sentMessageCardHtml =
         `<li class="d-flex justify-content-end small p-2 ms-3 mb-1 rounded-3 bg">
   <div class="card">
-    <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(223, 243, 255)">
-      <p class="fw-bold mb-0">${message.sender}</p>
-    </div>
     <div class="card-body" style="background-color:rgb(223, 243, 255)">
       <pre>${message.body}</pre>
       <span class="tooltiptext">
@@ -191,11 +185,11 @@ const updateMessageListUI = () => {
       innerHTML = sentMessageCardHtml + innerHTML;
     } else {
       let receivedMessageCardHtml =
-        `<li class="d-flex justify-content-start small p-2 ms-3 mb-1 rounded-3 bg">
-  <div class="card">
-    <div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(229, 255, 223)">
+      `<li class="d-flex justify-content-start small p-2 ms-3 mb-1 rounded-3 bg">
+      <div class="card">` + (isGroup=="true"?`<div class="card-header d-flex justify-content-between p-3" style="background-color:rgb(229, 255, 223)">
       <p class="fw-bold mb-0">${message.sender}</p>
-    </div>
+    </div>`:``) + 
+        `
     <div class="card-body" style="background-color:rgb(229, 255, 223)">
       <pre>${message.body}</pre>
       <span class="tooltiptext">
