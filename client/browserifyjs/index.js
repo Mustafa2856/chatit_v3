@@ -2,11 +2,23 @@ import { decrypt, generatePrivate, getPublic, encrypt, sign } from 'eccrypto';
 import ipfsClient from 'ipfs-http-client';
 import { version } from 'typescript';
 
-const ipfs = ipfsClient('http://localhost:5001/api/v0');
+var ipfs = ipfsClient('http://localhost:5001/api/v0');
 
 var serverURL = 'http://localhost:5000'
 var namespaceURL = 'http://localhost:3000'
 let msgStream;
+
+const setSeverUrl = (url) => {
+    serverURL = url;
+}
+
+const setNamespaceUrl = (url) => {
+    namespaceURL = url;
+}
+
+const setIpfsApiUrl = (url) => {
+    ipfs = ipfsClient(url);
+}
 
 const getAESKey = async (username, password) => {
     let encoder = new TextEncoder();
@@ -671,5 +683,8 @@ window.serverconnect = {
     'getMessageFromIPFSUI': getMessageFromIPFSUI,
     'getGroupMessageFromIPFSUI': getGroupMessageFromIPFSUI,
     'getGroupList': getGroupList,
-    'sendGroupMessage': sendGroupMessage
+    'sendGroupMessage': sendGroupMessage,
+    'setServerUrl': setSeverUrl,
+    'setNamespaceUrl': setNamespaceUrl,
+    'setIpfsUrl': setIpfsApiUrl
 }

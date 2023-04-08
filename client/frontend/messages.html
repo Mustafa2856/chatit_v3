@@ -9,6 +9,11 @@
   <script src="bundle.js"></script>
   <script>
     window.onload = () => {
+      loadConfig();
+      if(!sessionStorage.getItem("username")){
+        window.location.replace("login.html");
+        return;
+      }
       getMessages().then(() => {
         updateMessageListUI();
         const stream = serverconnect.getMessagesStream();

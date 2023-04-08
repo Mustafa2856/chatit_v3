@@ -37,5 +37,34 @@
         </div>
     </nav>
 
-    <div>Decentralized End-to-End Encrypted Communication</div>
+    <section class="vh-100">
+        <div class="container-fluid h-custom">
+            <div class="row d-flex justify-content-center align-items-center h-100">
+                <div class="col-md-8 col-lg-6 col-xl-4 offset-xl-1">
+                    <form>
+                        <div class="form-floating mb-4">
+                            <input type="text" id="ServerUrl" class="form-control form-control-lg"
+                                placeholder="Enter URL for subscribed Host Server" />
+                            <label class="form-label" for="ServerUrl">Host Server Url</label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="text" id="NamespaceUrl" class="form-control form-control-lg"
+                                placeholder="Enter URL for subscribed Host Server" />
+                            <label class="form-label" for="NamespaceUrl">Namespace Node Url</label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="text" id="IpfsApiUrl" class="form-control form-control-lg"
+                                placeholder="Enter URL for subscribed Host Server" />
+                            <label class="form-label" for="ServerUrl">IPFS API Endpoint Url</label>
+                        </div>
+                        <div class="row d-flex align-items-center text-lg-start ">
+                            <button type="button" class="btn btn-primary btn-lg"
+                                onclick="saveConfig()">Save Configuration</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
 </body>

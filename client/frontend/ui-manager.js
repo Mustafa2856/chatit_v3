@@ -5,6 +5,23 @@ let groupList = [];
 let seenAESKeys = [];
 var msgStream;
 
+const saveConfig = () => {
+  let serverURL = document.getElementById('ServerUrl').value;
+  let namespaceURL = document.getElementById('NamespaceUrl').value;
+  let IpfsApiUrl = document.getElementById('IpfsApiUrl').value;
+  if(serverURL)sessionStorage.setItem('ServerUrl',serverURL);
+  if(namespaceURL)sessionStorage.setItem('NamespaceUrl',namespaceURL);
+  if(IpfsApiUrl)sessionStorage.setItem('IpfsApiUrl',IpfsApiUrl);
+  window.location.replace("login.html");
+}
+
+const loadConfig = () => {
+  if(sessionStorage.getItem('ServerUrl'))serverconnect.setServerUrl(sessionStorage.getItem('ServerUrl'));
+  if(sessionStorage.getItem('NamespaceUrl'))serverconnect.setNamespaceUrl(sessionStorage.getItem('NamespaceUrl'));
+  if(sessionStorage.getItem('IpfsApiUrl'))serverconnect.setIpfsUrl(sessionStorage.getItem('IpfsApiUrl'));
+}
+window.onload = loadConfig;
+
 const login = async (username, password) => {
   let successful = await serverconnect.loginUser(username, password).catch((err) => { console.log(err) });
   if (successful) window.location.replace("messages.html");
