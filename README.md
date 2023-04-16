@@ -9,9 +9,9 @@ docker-compose up --build
 
 - [x] MIME
 - [ ] MIME captioning
-- [ ] host and namespace node selector
+- [x] host and namespace node selector
 - [ ] group and userinfo page
-- [ ] message ordering
-- [ ] message store
-- [ ] Refernece prev messages
+- [x] message ordering
+- [x] message store
+- [x] Refernece prev messages
 - [ ] UI polishing

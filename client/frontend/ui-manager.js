@@ -35,6 +35,7 @@ const register = async (username, email, password) => {
 const sendMessage = async () => {
   let isGroup = sessionStorage.getItem("isGroup");
   let message = document.getElementById("messageInput").value;
+  let ref = "";
   if (isGroup == "true") {
     let group = sessionStorage.getItem("groupMessageWindow")
     if (group == null || group == undefined) return;
@@ -42,11 +43,15 @@ const sendMessage = async () => {
     let groupid = group[0];
     let version = group[1];
     if (groupid == "") return;
-    await serverconnect.sendGroupMessage(groupid, version, message);
+    ref = messagesBuffer[groupid][messagesBuffer[groupid].length - 1];
+    console.log(ref, messagesBuffer[groupid]);
+    await serverconnect.sendGroupMessage(groupid, version, message, false, "", ref);
   } else {
     let username = sessionStorage.getItem("userMessageWindow");
     if (username == "") return;
-    await serverconnect.sendMessage(username, message);
+    ref = messagesBuffer[username][messagesBuffer[username].length - 1];
+    console.log(ref, messagesBuffer[username]);
+    await serverconnect.sendMessage(username, message, false, "", ref);
   }
   document.getElementById("messageInput").value = "";
 }

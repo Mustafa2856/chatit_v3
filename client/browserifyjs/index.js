@@ -126,7 +126,14 @@ const getMessageFromIPFS = async (username, privateKey, content_address) => {
     },
         AESKey,
         encryptedMessage)
-    return Buffer.from(decryptedMessage)
+    let prevMsgRef = "";
+    if(body.length > 8) {
+        prevMsgRef = body[8];
+    }
+    return {
+        ref: prevMsgRef,
+        body: Buffer.from(decryptedMessage)
+    }
 }
 
 const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, content_address) => {
@@ -181,7 +188,14 @@ const getGroupMessageFromIPFS = async (groupid, version, username, privateKey, c
     },
         groupAESKey,
         encryptedMessage)
-    return Buffer.from(decryptedMessage)
+    let prevMsgRef = "";
+    if(body.length > 4) {
+        prevMsgRef = body[4];
+    }
+    return {
+        ref: prevMsgRef,
+        body: Buffer.from(decryptedMessage)
+    }
 }
 
 const registerUser = async (username, email, password) => {
@@ -247,7 +261,7 @@ const loginUser = async (username, password) => {
     }
 }
 
-const sendMessage = async (receiver, message, isFile = false, fileName = "") => {
+const sendMessage = async (receiver, message, isFile = false, fileName = "", ref="") => {
     // if logged in
     if (sessionStorage.getItem('username') != null) {
         let sender = sessionStorage.getItem('username');
@@ -288,7 +302,8 @@ const sendMessage = async (receiver, message, isFile = false, fileName = "") => 
             + Buffer.from(IV).toString('base64') + '\n'
             + JSON.stringify(encryptedAESKeySender) + '\n'
             + JSON.stringify(encryptedAESKeyReceiver) + '\n'
-            + Buffer.from(encryptedMessage).toString('base64');
+            + Buffer.from(encryptedMessage).toString('base64') + '\n'
+            + ref;
         let response = await ipfs.add(Buffer.from(finalMessage));
         let content_address_clipped = Buffer.from(response.path).subarray(0, 32);
 
@@ -330,12 +345,15 @@ const getMessages = async (timestamp) => {
             for (var message of allMessages[user]) {
                 if (message.is_group) {
                     message.body = await getGroupMessageFromIPFS(message.groupid, message.group_version, username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message.content_address)
+                    message.ref = message.body.ref;
+                    message.body = message.body.body;
                 }
                 else {
-                    message.body = await getMessageFromIPFS(username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message.content_address)
+                    message.body = await getMessageFromIPFS(username, Buffer.from(sessionStorage.getItem('privateKey'), 'base64'), message.content_address);
+                    message.ref = message.body.ref;
+                    message.body = message.body.body;
                 }
             }
-
         }
         return allMessages
     }
@@ -579,7 +597,7 @@ const getGroupList = async () => {
     return [];
 }
 
-const sendGroupMessage = async (groupid, groupversion, message, isFile = false, fileName = "") => {
+const sendGroupMessage = async (groupid, groupversion, message, isFile = false, fileName = "", ref = "") => {
     let sender = sessionStorage.getItem('username');
     let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64');
     let groupAESKey = sessionStorage.getItem('aeskey-' + groupid + "/" + groupversion + sender);
@@ -620,7 +638,8 @@ const sendGroupMessage = async (groupid, groupversion, message, isFile = false, 
         sender + '\n'
         + groupid + '\n'
         + Buffer.from(IV).toString('base64') + '\n'
-        + Buffer.from(encryptedMessage).toString('base64');
+        + Buffer.from(encryptedMessage).toString('base64') + '\n'
+        + ref;
     let response = await ipfs.add(Buffer.from(finalMessage));
     let content_address_clipped = Buffer.from(response.path).subarray(0, 32);
 
