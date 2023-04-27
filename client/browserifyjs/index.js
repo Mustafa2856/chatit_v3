@@ -368,7 +368,12 @@ const getMessagesStream = () => {
     }
     if (sessionStorage.getItem("username") != null) {
         let username = sessionStorage.getItem("username")
-        msgStream = new EventSource(serverURL + "/get-messages-stream/" + username)
+        let sessionId = sessionStorage.getItem("sessionId")
+        if(!sessionId){
+            sessionId = Math.round(Math.random() * 10000)
+            sessionStorage.setItem("sessionId", sessionId)
+        }
+        msgStream = new EventSource(serverURL + "/get-messages-stream/" + username + "?s=" + sessionId)
         return msgStream
     }
     throw new Error("user not logged in!")
@@ -691,6 +696,17 @@ const tryBadMac = async (privateKey, publicKey) => {
     }
 }
 
+const getActiveListeners = async () => {
+    let username = sessionStorage.getItem("username");
+    let res = await fetch(serverURL + "/active-listeners/" + username, {
+        method: "GET",
+        cache: "no-cache"
+    });
+    let count = await res.json()
+    count = count.count
+    return count
+} 
+
 window.serverconnect = {
     'registerUser': registerUser,
     'loginUser': loginUser,
@@ -705,5 +721,6 @@ window.serverconnect = {
     'sendGroupMessage': sendGroupMessage,
     'setServerUrl': setSeverUrl,
     'setNamespaceUrl': setNamespaceUrl,
-    'setIpfsUrl': setIpfsApiUrl
+    'setIpfsUrl': setIpfsApiUrl,
+    'getActiveListeners': getActiveListeners
 }

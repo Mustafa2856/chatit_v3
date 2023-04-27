@@ -43,13 +43,15 @@ const sendMessage = async () => {
     let groupid = group[0];
     let version = group[1];
     if (groupid == "") return;
-    ref = messagesBuffer[groupid][messagesBuffer[groupid].length - 1];
+    if(messagesBuffer[groupid] != null)
+    ref = messagesBuffer[groupid][messagesBuffer[groupid].length - 1].content_address;
     console.log(ref, messagesBuffer[groupid]);
     await serverconnect.sendGroupMessage(groupid, version, message, false, "", ref);
   } else {
     let username = sessionStorage.getItem("userMessageWindow");
     if (username == "") return;
-    ref = messagesBuffer[username][messagesBuffer[username].length - 1];
+    if(messagesBuffer[username] != null)
+    ref = messagesBuffer[username][messagesBuffer[username].length - 1].content_address;
     console.log(ref, messagesBuffer[username]);
     await serverconnect.sendMessage(username, message, false, "", ref);
   }
@@ -105,6 +107,7 @@ const updateMessagesBuffer = async (msg) => {
   } else {
     msg.body = await serverconnect.getMessageFromIPFSUI(username, msg.content_address)
   }
+  msg.body = msg.body.body
   let user = msg.sender
   if (msg.sender == username) user = msg.receiver
   if (msg.is_group) user = msg.groupid;
@@ -280,6 +283,14 @@ const sendMessageFile = async () => {
     }
   }
   fileReader.readAsArrayBuffer(files[0]);
+}
+
+const getActiveListeners = async () => {
+  let count = await serverconnect.getActiveListeners();
+  if(count == null)
+    document.getElementById("activeListeners").innerHTML = "aaa";
+  else 
+    document.getElementById("activeListeners").innerHTML = count;
 }
 
 const downloadFile = async (sender, content_address) => {

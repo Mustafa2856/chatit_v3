@@ -4,7 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body style="overflow-y: hidden;">
+<body>
   <script src="ui-manager.js"></script>
   <script src="bundle.js"></script>
   <script>
@@ -22,6 +22,7 @@
         }
         getGroups();
       })
+      getActiveListeners();
     }
   </script>
   <!-- CSS only -->
@@ -61,7 +62,7 @@
       <div class="row">
 
         <div class="col-md-6 col-lg-5 col-xl-4 mb-4 mb-md-0">
-
+          <div class="card">Active User Sessions: <p id="activeListeners"></p></div>
           <div class="card">
             <div class="card-body">
               <div class="input-group">

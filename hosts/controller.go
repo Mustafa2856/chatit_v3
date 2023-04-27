@@ -24,22 +24,25 @@ type Message struct {
 }
 
 type Listener struct {
-	Username string
-	Channel  chan Message
+	SessionId uint64
+	Username  string
+	Channel   chan Message
 }
 
 var db *sql.DB
 var msgChannel chan Message
 var activeListeners chan Listener
 var closeListener chan Listener
-var listeners map[string]chan Message
+var listeners map[string][]Listener
+var listenerCount uint64
 
 func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	db = db_
 	msgChannel = _msgChannel
-	listeners = make(map[string]chan Message)
+	listeners = make(map[string][]Listener)
 	go messageRelay()
 	activeListeners = make(chan Listener)
+	listenerCount = 0
 
 	service := gin.Default()
 	service.SetTrustedProxies(nil)
@@ -48,6 +51,7 @@ func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	service.POST("/send-message", sendMessage)
 	service.GET("/get-messages/:username", getMessages)
 	service.GET("/get-messages-stream/:username", getMessagesSSE)
+	service.GET("/active-listeners/:username", getActiveListeners)
 
 	ip := "0.0.0.0"
 	port := "5000"
@@ -59,17 +63,38 @@ func messageRelay() {
 	for {
 		select {
 		case listener := <-activeListeners:
-			listeners[listener.Username] = listener.Channel
+			flag := 0
+			for i, l := range listeners[listener.Username] {
+				if l.SessionId == listener.SessionId {
+					flag = 1
+					close(l.Channel)
+					println(l.Channel, listener.Channel)
+					listeners[listener.Username][i] = listener
+					break
+				}
+			}
+			if flag == 0 {
+				listeners[listener.Username] = append(listeners[listener.Username], listener)
+			}
 		case message := <-msgChannel:
 			if listeners[message.Receiver] != nil {
-				listeners[message.Receiver] <- message
+				for _, l := range listeners[message.Receiver] {
+					l.Channel <- message
+				}
 			}
 			if listeners[message.Sender] != nil {
-				listeners[message.Sender] <- message
+				for _, l := range listeners[message.Sender] {
+					l.Channel <- message
+				}
 			}
 		case listener := <-closeListener:
-			if listeners[listener.Username] != nil {
-				listeners[listener.Username] = nil
+			for i, l := range listeners[listener.Username] {
+				if l.SessionId == listener.SessionId {
+					close(l.Channel)
+					listeners[listener.Username][i] = listeners[listener.Username][len(listeners[listener.Username])-1]
+					listeners[listener.Username] = listeners[listener.Username][:len(listeners[listener.Username])-1]
+					break
+				}
 			}
 		}
 	}
@@ -106,6 +131,15 @@ func sendMessage(c *gin.Context) {
 			return
 		}
 		c.AbortWithStatus(http.StatusOK)
+	}
+}
+
+func getActiveListeners(c *gin.Context) {
+	username := c.Param("username")
+	if listeners[username] != nil {
+		c.JSON(200, gin.H{"count": len(listeners[username])})
+	} else {
+		c.AbortWithStatusJSON(200, gin.H{"count": 0})
 	}
 }
 
@@ -202,15 +236,19 @@ func getMessages(c *gin.Context) {
 
 func getMessagesSSE(c *gin.Context) {
 	username := c.Param("username")
-
+	id, err := strconv.ParseUint(c.Query("s"), 10, 64)
+	if err != nil {
+		id = listenerCount + 1
+		listenerCount += 1
+	}
 	newMessageChannel := make(chan Message)
-	activeListeners <- Listener{username, newMessageChannel}
+	activeListeners <- Listener{id, username, newMessageChannel}
 	c.Stream(func(w io.Writer) bool {
 		if msg, ok := <-newMessageChannel; ok {
 			c.SSEvent("message", msg)
 			return true
 		}
-		closeListener <- Listener{username, newMessageChannel}
+		closeListener <- Listener{id, username, newMessageChannel}
 		return false
 	})
 }
