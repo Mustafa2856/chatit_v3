@@ -707,6 +707,26 @@ const getActiveListeners = async () => {
     return count
 } 
 
+const deleteMsg = async (content_address) => {
+    let username = sessionStorage.getItem('username');
+    let privateKey = Buffer.from(sessionStorage.getItem('privateKey'), 'base64');
+    let content_address_clipped = Buffer.from(content_address).subarray(0, 32);
+    let signature = await sign(privateKey, content_address_clipped);
+    await fetch(serverURL + "/delete-message/" + username, {
+        method: 'POST',
+        cache: 'no-cache',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        redirect: 'follow',
+        referrerPolicy: 'no-referrer',
+        body: JSON.stringify({
+            'content_address': content_address,
+            'signature': signature.toString('base64'),
+        })
+    });
+}
+
 window.serverconnect = {
     'registerUser': registerUser,
     'loginUser': loginUser,
@@ -722,5 +742,6 @@ window.serverconnect = {
     'setServerUrl': setSeverUrl,
     'setNamespaceUrl': setNamespaceUrl,
     'setIpfsUrl': setIpfsApiUrl,
-    'getActiveListeners': getActiveListeners
+    'getActiveListeners': getActiveListeners,
+    'deleteMsg': deleteMsg
 }

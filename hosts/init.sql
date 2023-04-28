@@ -11,6 +11,8 @@ CREATE TABLE messages (
      sent_time TIMESTAMP,
      signature BYTEA,
      is_group BOOLEAN,
+     sdeleted BOOLEAN,
+     rdeleted BOOLEAN,
      PRIMARY KEY (content_address, receiver)
 );
 

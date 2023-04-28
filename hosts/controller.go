@@ -21,12 +21,18 @@ type Message struct {
 	Timestamp      uint64 `json:"timestamp"`
 	Signature      []byte `json:"signature" binding:"required"`
 	IsGroup        bool   `json:"is_group"`
+	Deleted        bool   `json:"deleted"`
 }
 
 type Listener struct {
 	SessionId uint64
 	Username  string
 	Channel   chan Message
+}
+
+type DeleteMessageReq struct {
+	ContentAddress string `json:"content_address" binding:"required"`
+	Signature      []byte `json:"signature" binding:"required"`
 }
 
 var db *sql.DB
@@ -52,6 +58,7 @@ func api_setup(db_ *sql.DB, _msgChannel chan Message) {
 	service.GET("/get-messages/:username", getMessages)
 	service.GET("/get-messages-stream/:username", getMessagesSSE)
 	service.GET("/active-listeners/:username", getActiveListeners)
+	service.POST("/delete-message/:username", deleteMessage)
 
 	ip := "0.0.0.0"
 	port := "5000"
@@ -117,7 +124,7 @@ func sendMessage(c *gin.Context) {
 		c.AbortWithStatus(http.StatusUnauthorized)
 	} else {
 		// message verified from sender
-		if _, err := db.Exec("INSERT INTO messages (content_address, content_type, sender, group_id, group_version, receiver, sent_time, signature, is_group) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,$7,$8)",
+		if _, err := db.Exec("INSERT INTO messages (content_address, content_type, sender, group_id, group_version, receiver, sent_time, signature, is_group, sdeleted, rdeleted) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,$7,$8, FALSE, FALSE)",
 			request.ContentAddress,
 			request.ContentType,
 			request.Sender,
@@ -147,6 +154,12 @@ func getActiveListeners(c *gin.Context) {
 func getMessages(c *gin.Context) {
 	username := c.Param("username")
 	timestamp := c.Query("timestamp")
+	deletedQuery := c.Query("deleted")
+	deleted := false
+	_ = deleted
+	if deletedQuery != "" {
+		deleted = true
+	}
 	if timestamp != "" {
 		timestamp, err := strconv.ParseUint(timestamp, 10, 64)
 		if err != nil {
@@ -156,7 +169,7 @@ func getMessages(c *gin.Context) {
 		}
 		response := map[string][]Message{}
 		var message Message
-		sentMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE sender = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		sentMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group, sdeleted FROM messages WHERE sender = $1 AND cast(extract(epoch from sent_time) as integer) > $2 AND (sdeleted = FALSE OR sdeleted = $3)", username, timestamp, deleted)
 		if err != nil {
 			println(err.Error())
 			c.AbortWithStatus(http.StatusBadRequest)
@@ -172,7 +185,8 @@ func getMessages(c *gin.Context) {
 				&message.Receiver,
 				&message.Timestamp,
 				&message.Signature,
-				&message.IsGroup)
+				&message.IsGroup,
+				&message.Deleted)
 			if message.IsGroup {
 				if messageList, ok := response[base64.StdEncoding.EncodeToString(message.GroupId)]; ok {
 					messageList = append(messageList, message)
@@ -189,7 +203,7 @@ func getMessages(c *gin.Context) {
 				response[message.Receiver] = messageList
 			}
 		}
-		receivedMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group FROM messages WHERE receiver = $1 AND cast(extract(epoch from sent_time) as integer) > $2", username, timestamp)
+		receivedMessageRows, err := db.Query("SELECT content_address, content_type, sender, group_id, group_version, receiver, cast(extract(epoch from sent_time) as integer) sent_time, signature, is_group, rdeleted FROM messages WHERE receiver = $1 AND cast(extract(epoch from sent_time) as integer) > $2 AND (rdeleted = FALSE OR rdeleted = $3)", username, timestamp, deleted)
 		if err != nil {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
@@ -204,7 +218,8 @@ func getMessages(c *gin.Context) {
 				&message.Receiver,
 				&message.Timestamp,
 				&message.Signature,
-				&message.IsGroup)
+				&message.IsGroup,
+				&message.Deleted)
 			if message.IsGroup {
 				if messageList, ok := response[base64.StdEncoding.EncodeToString(message.GroupId)]; ok {
 					messageList = append(messageList, message)
@@ -232,6 +247,31 @@ func getMessages(c *gin.Context) {
 	} else {
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
+}
+
+func deleteMessage(c *gin.Context) {
+	username := c.Param("username")
+	var request DeleteMessageReq
+	if verified, _ := verifySignature(username, []byte(request.ContentAddress), request.Signature); !verified {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	if err := c.BindJSON(&request); err != nil {
+		println(err.Error())
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	if _, err := db.Exec("UPDATE messages SET sdeleted=TRUE WHERE content_address=$1 AND sender=$2", request.ContentAddress, username); err != nil {
+		println(err.Error())
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if _, err := db.Exec("UPDATE messages SET rdeleted=TRUE WHERE content_address=$1 AND receiver=$2", request.ContentAddress, username); err != nil {
+		println(err.Error())
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	c.AbortWithStatus(200)
 }
 
 func getMessagesSSE(c *gin.Context) {
