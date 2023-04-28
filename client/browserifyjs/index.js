@@ -331,14 +331,22 @@ const sendMessage = async (receiver, message, isFile = false, fileName = "", ref
     }
 }
 
-const getMessages = async (timestamp) => {
+const getMessages = async (timestamp, deleted = false) => {
     // if logged in
     if (sessionStorage.getItem("username") != null) {
         let username = sessionStorage.getItem("username")
-        let response = await fetch(serverURL + "/get-messages/" + username + "?timestamp=" + timestamp, {
-            method: "GET",
-            cache: "no-cache"
-        });
+        let response;
+        if(deleted){
+            response = await fetch(serverURL + "/get-messages/" + username + "?timestamp=" + timestamp + "&deleted=1", {
+                method: "GET",
+                cache: "no-cache"
+            });
+        }else {
+            response = await fetch(serverURL + "/get-messages/" + username + "?timestamp=" + timestamp, {
+                method: "GET",
+                cache: "no-cache"
+            });
+        }
         let allMessages = await response.json()
         // get message body for each message
         for (var user in allMessages) {
